@@ -4,6 +4,7 @@
 
 int main(int argc, char* argv[]) {
 
+    const int twoTo22 = 4194304;
     char* inputFileName1 = argv[1];
     char* inputFileName2 = argv[2];
     int frameNum = atoi(argv[3]);
@@ -13,6 +14,19 @@ int main(int argc, char* argv[]) {
     FILE* inFile1 = fopen(inputFileName1, "r");
     FILE* inFile2 = fopen(inputFileName2, "r");
     FILE* outFile = fopen(outFileName, "w");
+
+    struct frame frames[frameNum];
+    for ( int i = 0; i < frameNum; i++ ) {
+        frames[i].occupied = 0; // all frames are empty initially
+    }
+    
+    struct outerTable* outTable = malloc(sizeof(struct outerTable)); // allocate from the heap
+    for ( int i = 0; i < 1024; i++ ) {
+        for ( int j = 0; j < 1024; j++ ) {
+            outTable->tables[i].entries[j].validBit = 0; // set all the valid bits to invalid initially
+        }
+    }
+    
 
     char word[64];
     char c;
@@ -40,7 +54,19 @@ int main(int argc, char* argv[]) {
         index++;
     }
 
+    // Scan the file containing virtual addresses to transform
+    while ( fscanf(inFile2, "%s", word) == 1 ) {
+        long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
+        long int firstTableIndex = virtualAdr / twoTo22; // divide by 
+        printf("first index: %ld\n", firstTableIndex);
+    }
+
+    // some testing
+    printf("%ld\n", virtualAddresses[2].end);
+    printf("%d\n", outTable->tables[511].entries[2].validBit);
+
     fclose(inFile1);
     fclose(inFile2);
     fclose(outFile);
+    free(outTable);
 }
