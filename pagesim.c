@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "memory.h"
+#include <string.h>
 
 int main(int argc, char* argv[]) {
 
@@ -10,7 +11,7 @@ int main(int argc, char* argv[]) {
     char* inputFileName2 = argv[2];
     int frameNum = atoi(argv[3]);
     char* outFileName = argv[4];
-    char* algorithm = argv[6];
+    int algorithm = atoi(argv[6]);
 
     FILE* inFile1 = fopen(inputFileName1, "r");
     FILE* inFile2 = fopen(inputFileName2, "r");
@@ -60,8 +61,9 @@ int main(int argc, char* argv[]) {
     while ( fscanf(inFile2, "%s", word) == 1 ) {
         long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
         long int vpn = virtualAdr / twoTo12; 
-        long int firstTableIndex = virtualAdr / twoTo22; // divide by 
+        long int firstTableIndex = virtualAdr / twoTo22; // divide by 2^22
         long int secondTableIndex = ((virtualAdr - twoTo22 * firstTableIndex) / twoTo12);
+        int pageOffset = virtualAdr % twoTo12;
 
         int found = 0;
         for ( int i = 0; i < lineCount; i++ ) {
@@ -78,22 +80,60 @@ int main(int argc, char* argv[]) {
                     struct frame newFrame;
                     newFrame.vpn = vpn;
                     newFrame.occupied = 1;
-
+                    
+                    outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = frameCount; // put the frame count
                     frames[frameCount] = newFrame;
+
+                    // write to file
+                    char hex[4];
+                    sprintf(hex, "%x", frameCount);
+
+                    int length = 5 - strlen(hex); // get the number of preceeding zeros
+                    char zeros[length + 1];
+                    for ( int i = 0; i < length + 1; i++ ) {
+                        zeros[i] = '0';
+                    }
+                    zeros[length] = '\0';
+
+                    fprintf(outFile, "0x%s%s%c%c%c x\n", zeros, hex, word[7], word[8], word[9]);
+
                     frameCount++;
                 }
                 else { // apply algorithms to frame
 
+                    if ( algorithm == 1 ) {
+                        // evict with FIFO
+                        long int evictedVPN = frames[0].vpn;
+                        long int evictedFirstIndex = evictedVPN / 1024;
+                        long int evictedSecondIndex = evictedVPN % 1024;
+
+                        for ( int i = 0; i < frameCount - 1; i++ ) {
+                            frames[i] = frames[i + 1];
+                        }
+
+                        frames[frameCount - 1].vpn = vpn;
+                        frames[frameCount - 1].occupied = 1;
+
+                        outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = frameCount - 1; // set the frame count
+
+                        // set the valid bit of the evicted to 0
+                        outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].validBit = 0;
+                        outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].frameNum = -1;
+
+                    }
+                    else {
+                        // evict with LRU
+                    }
                 }
             }
             else { // page exists in the physical memory
-
+                // make LRU updates here
             }
 
             outTable->tables[firstTableIndex].entries[secondTableIndex].validBit = 1; // set the valid bit to 1 after finding a frame
         }
         else { // invalid virtual address, write it with e
-
+            fprintf(outFile, "%s e\n", word);
         }
     }
 
