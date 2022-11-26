@@ -8,6 +8,7 @@ typedef struct virtualMem {
 
 typedef struct frame {
     long int vpn;
+    int order; // starts from 1, increases with the time
     int occupied; // 0 is unoccupied, 1 is occupied
 } frame;
 

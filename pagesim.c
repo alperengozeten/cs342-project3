@@ -57,6 +57,7 @@ int main(int argc, char* argv[]) {
         index++;
     }
 
+    int timeCounter = 1;
     // Scan the file containing virtual addresses to transform
     while ( fscanf(inFile2, "%s", word) == 1 ) {
         long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
@@ -80,11 +81,25 @@ int main(int argc, char* argv[]) {
                     struct frame newFrame;
                     newFrame.vpn = vpn;
                     newFrame.occupied = 1;
+                    if ( algorithm == 2 ) {
+                        newFrame.order = 1;
+                    }
+                    else {
+                        newFrame.order = timeCounter;
+                        timeCounter++;
+                    }
                     
-                    outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = frameCount; // put the frame count
+                    outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = frameCount; // put the frame number
                     frames[frameCount] = newFrame;
 
-                    // write to file
+                    if ( algorithm == 2 ) {
+                        // increase the order of the others
+                        for ( int i = 0; i < frameCount; i++ ) {
+                            frames[i].order++;
+                        }
+                    }
+
+                    // convert to hex
                     char hex[4];
                     sprintf(hex, "%x", frameCount);
 
@@ -95,39 +110,116 @@ int main(int argc, char* argv[]) {
                     }
                     zeros[length] = '\0';
 
+                    // write to file
                     fprintf(outFile, "0x%s%s%c%c%c x\n", zeros, hex, word[7], word[8], word[9]);
 
                     frameCount++;
                 }
                 else { // apply algorithms to frame
+                    int evictedIndex;
 
-                    if ( algorithm == 1 ) {
+                    if ( algorithm == 2 ) {
                         // evict with FIFO
-                        long int evictedVPN = frames[0].vpn;
-                        long int evictedFirstIndex = evictedVPN / 1024;
-                        long int evictedSecondIndex = evictedVPN % 1024;
 
+                        int maxIndex = -1;
+                        int maxOrder = -1;
+                        
+                        // find the oldest one
                         for ( int i = 0; i < frameCount - 1; i++ ) {
-                            frames[i] = frames[i + 1];
+                            if ( frames[i].order > maxOrder ) {
+                                maxIndex = i;
+                                maxOrder = frames[i].order;
+                            }
                         }
 
-                        frames[frameCount - 1].vpn = vpn;
-                        frames[frameCount - 1].occupied = 1;
-
-                        outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = frameCount - 1; // set the frame count
-
-                        // set the valid bit of the evicted to 0
-                        outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].validBit = 0;
-                        outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].frameNum = -1;
+                        // get the evicted vpn
+                        evictedIndex = maxIndex;
 
                     }
                     else {
                         // evict with LRU
+                        int minIndex = -1;
+                        int minOrder = __INT_MAX__;
+                        
+                        // find the oldest one
+                        for ( int i = 0; i < frameCount - 1; i++ ) {
+                            if ( frames[i].order < minOrder ) {
+                                minIndex = i;
+                                minOrder = frames[i].order;
+                            }
+                        }
+
+                        evictedIndex = minIndex;
                     }
+
+                    long int evictedVPN = frames[evictedIndex].vpn;
+                    long int evictedFirstIndex = evictedVPN / 1024;
+                    long int evictedSecondIndex = evictedVPN % 1024;
+
+                    frames[evictedIndex].vpn = vpn;
+                    frames[evictedIndex].occupied = 1;
+
+                    if ( algorithm == 2 ) {
+                        frames[evictedIndex].order = 1;
+
+                        for ( int i = 0; i < frameCount; i++ ) {
+                            if ( i != evictedIndex ) {
+                                frames[i].order++;
+                            }
+                        }
+                    }
+                    else {
+                        frames[evictedIndex].order = timeCounter;
+                        timeCounter++;
+                    }
+
+                    outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum = evictedIndex; // set the frame number
+
+                    // set the valid bit of the evicted to 0
+                    outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].validBit = 0;
+                    outTable->tables[evictedFirstIndex].entries[evictedSecondIndex].frameNum = -1;
+
+                    // output to the file
+                    int frameNumber = evictedIndex;
+                    // convert to hex
+                    char hex[4];
+                    sprintf(hex, "%x", frameNumber);
+
+                    int length = 5 - strlen(hex); // get the number of preceeding zeros
+                    char zeros[length + 1];
+                    for ( int i = 0; i < length + 1; i++ ) {
+                        zeros[i] = '0';
+                    }
+                    zeros[length] = '\0';
+
+                    // write to file
+                    fprintf(outFile, "0x%s%s%c%c%c x\n", zeros, hex, word[7], word[8], word[9]);
                 }
             }
             else { // page exists in the physical memory
                 // make LRU updates here
+                
+                int frameNumber = outTable->tables[firstTableIndex].entries[secondTableIndex].frameNum;
+
+                if ( algorithm == 1 ) {
+                    frames[frameNumber].order = timeCounter;
+                    timeCounter++;
+                }
+                printf("exists, frame num: %d\n", frameNumber);
+
+                // convert to hex
+                char hex[4];
+                sprintf(hex, "%x", frameNumber);
+
+                int length = 5 - strlen(hex); // get the number of preceeding zeros
+                char zeros[length + 1];
+                for ( int i = 0; i < length + 1; i++ ) {
+                    zeros[i] = '0';
+                }
+                zeros[length] = '\0';
+
+                // write to file
+                fprintf(outFile, "0x%s%s%c%c%c x\n", zeros, hex, word[7], word[8], word[9]);
             }
 
             outTable->tables[firstTableIndex].entries[secondTableIndex].validBit = 1; // set the valid bit to 1 after finding a frame
