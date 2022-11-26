@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
                         int maxOrder = -1;
                         
                         // find the oldest one
-                        for ( int i = 0; i < frameCount - 1; i++ ) {
+                        for ( int i = 0; i < frameCount; i++ ) {
                             if ( frames[i].order > maxOrder ) {
                                 maxIndex = i;
                                 maxOrder = frames[i].order;
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
                         int minOrder = __INT_MAX__;
                         
                         // find the oldest one
-                        for ( int i = 0; i < frameCount - 1; i++ ) {
+                        for ( int i = 0; i < frameCount; i++ ) {
                             if ( frames[i].order < minOrder ) {
                                 minIndex = i;
                                 minOrder = frames[i].order;
@@ -152,6 +152,7 @@ int main(int argc, char* argv[]) {
                         evictedIndex = minIndex;
                     }
 
+                    printf("evicted frame: %d\n", evictedIndex);
                     long int evictedVPN = frames[evictedIndex].vpn;
                     long int evictedFirstIndex = evictedVPN / 1024;
                     long int evictedSecondIndex = evictedVPN % 1024;
@@ -219,7 +220,7 @@ int main(int argc, char* argv[]) {
                 zeros[length] = '\0';
 
                 // write to file
-                fprintf(outFile, "0x%s%s%c%c%c x\n", zeros, hex, word[7], word[8], word[9]);
+                fprintf(outFile, "0x%s%s%c%c%c \n", zeros, hex, word[7], word[8], word[9]);
             }
 
             outTable->tables[firstTableIndex].entries[secondTableIndex].validBit = 1; // set the valid bit to 1 after finding a frame
