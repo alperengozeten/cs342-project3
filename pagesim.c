@@ -127,8 +127,6 @@ int main(int argc, char* argv[]) {
         long int secondTableIndex = ((virtualAdr - twoTo22 * firstTableIndex) / twoTo12);
         int pageOffset = virtualAdr % twoTo12;
 
-        printf("second table Index: %ld\n", secondTableIndex);
-
         int found = 0;
         for ( int i = 0; i < lineCount; i++ ) {
             if ( virtualAddresses[i].start <= virtualAdr && virtualAddresses[i].end > virtualAdr ) {
@@ -292,16 +290,6 @@ int main(int argc, char* argv[]) {
             fprintf(outFile, "%s e\n", word);
         }
     }
-
-
-    printf("%d\n", outTable->tables[64].entries[768].validBit);
-    printf("%d\n", outTable->tables[64].entries[767].validBit);
-    printf("frameCount: %d\n", frameCount);
-    printf("%ld\n", frames[2].vpn);
-
-    // some testing
-    //printf("%ld\n", virtualAddresses[2].end);
-    //printf("%d\n", outTable->tables[511].entries[2].validBit);
 
     if ( argc == 7 ) {
         fclose(inFile1);
