@@ -3,18 +3,42 @@
 #include "memory.h"
 #include <string.h>
 
+long generateRandomAddress(long addressHigh) {
+    return rand() / (RAND_MAX / addressHigh + 1);
+}
+
 int main(int argc, char* argv[]) {
 
     const int twoTo22 = 4194304;
     const int twoTo12 = 4096; 
-    char* inputFileName1 = argv[1];
-    char* inputFileName2 = argv[2];
-    int frameNum = atoi(argv[3]);
-    char* outFileName = argv[4];
-    int algorithm = atoi(argv[6]);
+    char* inputFileName1; 
+    char* inputFileName2;
+    int frameNum;
+    int algorithm;
+    char* outFileName;
+    long vmsize;
+    int addressCount;
+    FILE* inFile1;
+    FILE* inFile2;
 
-    FILE* inFile1 = fopen(inputFileName1, "r");
-    FILE* inFile2 = fopen(inputFileName2, "r");
+    if ( argc == 7 ) {
+        inputFileName1 = argv[1];
+        inputFileName2 = argv[2];
+        frameNum = atoi(argv[3]);
+        outFileName = argv[4];
+        algorithm = atoi(argv[6]);
+
+        inFile1 = fopen(inputFileName1, "r");
+        inFile2 = fopen(inputFileName2, "r");
+    }
+    else {
+        frameNum = atoi(argv[1]);
+        outFileName = argv[2];
+        algorithm = atoi(argv[4]);
+        vmsize = atoi(argv[6]);
+        addressCount = atoi(argv[8]);
+    }
+
     FILE* outFile = fopen(outFileName, "w");
 
     struct frame frames[frameNum];
@@ -32,19 +56,22 @@ int main(int argc, char* argv[]) {
     
 
     char word[64];
-    char c;
-    int lineCount = 1;
-    //fscanf(inFile1, "%s", word) == 1;
+    if ( argc == 7 ) {
+        word[64];
+        char c;
+        addressCount = 1;
+        //fscanf(inFile1, "%s", word) == 1;
 
-    for ( c = getc(inFile1); c != EOF; c = getc(inFile1) ) {
-        if ( c == '\n' ) {
-            lineCount++;
+        for ( c = getc(inFile1); c != EOF; c = getc(inFile1) ) {
+            if ( c == '\n' ) {
+                addressCount++;
+            }
         }
     }
 
     rewind(inFile1); // set the pointer to the first line
 
-    struct virtualMem virtualAddresses[lineCount]; // create an array of struct
+    struct virtualMem virtualAddresses[addressCount]; // create an array of struct
     int index = 0;
 
     while ( fscanf(inFile1, "%s", word) == 1 ) {
@@ -58,8 +85,12 @@ int main(int argc, char* argv[]) {
     }
 
     int timeCounter = 1;
+    int done = 0;
     // Scan the file containing virtual addresses to transform
-    while ( fscanf(inFile2, "%s", word) == 1 ) {
+    if ( argc == 7 ) {
+        done = fscanf(inFile2, "%s", word);
+    }
+    while ( done == 1 ) {
         long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
         long int vpn = virtualAdr / twoTo12; 
         long int firstTableIndex = virtualAdr / twoTo22; // divide by 2^22
@@ -67,7 +98,7 @@ int main(int argc, char* argv[]) {
         int pageOffset = virtualAdr % twoTo12;
 
         int found = 0;
-        for ( int i = 0; i < lineCount; i++ ) {
+        for ( int i = 0; i < addressCount; i++ ) {
             if ( virtualAddresses[i].start <= virtualAdr && virtualAddresses[i].end > virtualAdr ) {
                 found = 1;
                 break;
@@ -227,6 +258,10 @@ int main(int argc, char* argv[]) {
         }
         else { // invalid virtual address, write it with e
             fprintf(outFile, "%s e\n", word);
+        }
+
+        if ( argc == 7 ) {
+            done = fscanf(inFile2, "%s", word);
         }
     }
 
