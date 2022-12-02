@@ -92,40 +92,42 @@ int main(int argc, char* argv[]) {
     }
 
     int timeCounter = 1;
-    int done = 0;
-    // Scan the file containing virtual addresses to transform
-    if ( argc == 7 ) {
-        done = fscanf(inFile2, "%s", word);
-    }
-    else {
-        long generatedAddress = generateRandomAddress(vmsize);
-        char hex[9];
-        sprintf(hex, "%x", (int) generatedAddress);
-
-        int length = 8 - strlen(hex); // get the number of preceeding zeros
-        char zeros[length + 1];
-        for ( int i = 0; i < length + 1; i++ ) {
-            zeros[i] = '0';
-        }
-        zeros[length] = '\0';
-
-        // write to file
-        sprintf(word, "0x%s%s", zeros, hex);
-        printf("generated addr: %s\n", word);
-        addressCount--;
-        if ( addressCount > 0 ) {
-            done = 1;
+    int done = 1;
+    while ( done == 1 ) {
+        // Scan the file containing virtual addresses to transform
+        if ( argc == 7 ) {
+            done = fscanf(inFile2, "%s", word);
         }
         else {
-            done = 0;
+            long generatedAddress = generateRandomAddress(vmsize);
+            char hex[9];
+            sprintf(hex, "%x", (int) generatedAddress);
+
+            int length = 8 - strlen(hex); // get the number of preceeding zeros
+            char zeros[length + 1];
+            for ( int i = 0; i < length + 1; i++ ) {
+                zeros[i] = '0';
+            }
+            zeros[length] = '\0';
+
+            // write to file
+            sprintf(word, "0x%s%s", zeros, hex);
+            printf("generated addr: %s\n", word);
+            addressCount--;
+            if ( addressCount > 0 ) {
+                done = 1;
+            }
+            else {
+                done = 0;
+            }
         }
-    }
-    while ( done == 1 ) {
         long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
         long int vpn = virtualAdr / twoTo12; 
         long int firstTableIndex = virtualAdr / twoTo22; // divide by 2^22
         long int secondTableIndex = ((virtualAdr - twoTo22 * firstTableIndex) / twoTo12);
         int pageOffset = virtualAdr % twoTo12;
+
+        printf("second table Index: %ld\n", secondTableIndex);
 
         int found = 0;
         for ( int i = 0; i < lineCount; i++ ) {
@@ -288,33 +290,6 @@ int main(int argc, char* argv[]) {
         }
         else { // invalid virtual address, write it with e
             fprintf(outFile, "%s e\n", word);
-        }
-
-        if ( argc == 7 ) {
-            done = fscanf(inFile2, "%s", word);
-        }
-        else {
-            long generatedAddress = generateRandomAddress(vmsize);
-            char hex[9];
-            sprintf(hex, "%x", (int) generatedAddress);
-            printf("generated addr: %s\n", word);
-
-            int length = 8 - strlen(hex); // get the number of preceeding zeros
-            char zeros[length + 1];
-            for ( int i = 0; i < length + 1; i++ ) {
-                zeros[i] = '0';
-            }
-            zeros[length] = '\0';
-
-            // write to file
-            sprintf(word, "0x%s%s", zeros, hex);
-            addressCount--;
-            if ( addressCount > 0 ) {
-                done = 1;
-            }
-            else {
-                done = 0;
-            }
         }
     }
 
