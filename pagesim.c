@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     int algorithm;
     char* outFileName;
     long vmsize;
+    int lineCount;
     int addressCount;
     FILE* inFile1;
     FILE* inFile2;
@@ -36,6 +37,7 @@ int main(int argc, char* argv[]) {
         outFileName = argv[2];
         algorithm = atoi(argv[4]);
         vmsize = atoi(argv[6]);
+        lineCount = 1;
         addressCount = atoi(argv[8]);
     }
 
@@ -59,29 +61,34 @@ int main(int argc, char* argv[]) {
     if ( argc == 7 ) {
         word[64];
         char c;
-        addressCount = 1;
+        lineCount = 1;
         //fscanf(inFile1, "%s", word) == 1;
 
         for ( c = getc(inFile1); c != EOF; c = getc(inFile1) ) {
             if ( c == '\n' ) {
-                addressCount++;
+                lineCount++;
             }
         }
+        rewind(inFile1); // set the pointer to the first line
     }
 
-    rewind(inFile1); // set the pointer to the first line
-
-    struct virtualMem virtualAddresses[addressCount]; // create an array of struct
+    struct virtualMem virtualAddresses[lineCount]; // create an array of struct
     int index = 0;
 
-    while ( fscanf(inFile1, "%s", word) == 1 ) {
-        long int startAdr = strtol(word, NULL, 0);
-        fscanf(inFile1, "%s", word); 
-        long int endAdr = strtol(word, NULL, 0);
+    if ( argc == 7 ) {
+        while ( fscanf(inFile1, "%s", word) == 1 ) {
+            long int startAdr = strtol(word, NULL, 0);
+            fscanf(inFile1, "%s", word); 
+            long int endAdr = strtol(word, NULL, 0);
 
-        virtualAddresses[index].start = startAdr;
-        virtualAddresses[index].end = endAdr;
-        index++;
+            virtualAddresses[index].start = startAdr;
+            virtualAddresses[index].end = endAdr;
+            index++;
+        }
+    }
+    else {
+        virtualAddresses[index].start = 0;
+        virtualAddresses[index].end = vmsize;
     }
 
     int timeCounter = 1;
@@ -89,6 +96,29 @@ int main(int argc, char* argv[]) {
     // Scan the file containing virtual addresses to transform
     if ( argc == 7 ) {
         done = fscanf(inFile2, "%s", word);
+    }
+    else {
+        long generatedAddress = generateRandomAddress(vmsize);
+        char hex[9];
+        sprintf(hex, "%x", (int) generatedAddress);
+
+        int length = 8 - strlen(hex); // get the number of preceeding zeros
+        char zeros[length + 1];
+        for ( int i = 0; i < length + 1; i++ ) {
+            zeros[i] = '0';
+        }
+        zeros[length] = '\0';
+
+        // write to file
+        sprintf(word, "0x%s%s", zeros, hex);
+        printf("generated addr: %s\n", word);
+        addressCount--;
+        if ( addressCount > 0 ) {
+            done = 1;
+        }
+        else {
+            done = 0;
+        }
     }
     while ( done == 1 ) {
         long int virtualAdr = strtol(word, NULL, 0); // convert to decimal
@@ -98,7 +128,7 @@ int main(int argc, char* argv[]) {
         int pageOffset = virtualAdr % twoTo12;
 
         int found = 0;
-        for ( int i = 0; i < addressCount; i++ ) {
+        for ( int i = 0; i < lineCount; i++ ) {
             if ( virtualAddresses[i].start <= virtualAdr && virtualAddresses[i].end > virtualAdr ) {
                 found = 1;
                 break;
@@ -263,7 +293,31 @@ int main(int argc, char* argv[]) {
         if ( argc == 7 ) {
             done = fscanf(inFile2, "%s", word);
         }
+        else {
+            long generatedAddress = generateRandomAddress(vmsize);
+            char hex[9];
+            sprintf(hex, "%x", (int) generatedAddress);
+            printf("generated addr: %s\n", word);
+
+            int length = 8 - strlen(hex); // get the number of preceeding zeros
+            char zeros[length + 1];
+            for ( int i = 0; i < length + 1; i++ ) {
+                zeros[i] = '0';
+            }
+            zeros[length] = '\0';
+
+            // write to file
+            sprintf(word, "0x%s%s", zeros, hex);
+            addressCount--;
+            if ( addressCount > 0 ) {
+                done = 1;
+            }
+            else {
+                done = 0;
+            }
+        }
     }
+
 
     printf("%d\n", outTable->tables[64].entries[768].validBit);
     printf("%d\n", outTable->tables[64].entries[767].validBit);
@@ -271,11 +325,13 @@ int main(int argc, char* argv[]) {
     printf("%ld\n", frames[2].vpn);
 
     // some testing
-    printf("%ld\n", virtualAddresses[2].end);
-    printf("%d\n", outTable->tables[511].entries[2].validBit);
+    //printf("%ld\n", virtualAddresses[2].end);
+    //printf("%d\n", outTable->tables[511].entries[2].validBit);
 
-    fclose(inFile1);
-    fclose(inFile2);
+    if ( argc == 7 ) {
+        fclose(inFile1);
+        fclose(inFile2);
+    }
     fclose(outFile);
     free(outTable);
 }
