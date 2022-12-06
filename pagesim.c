@@ -97,6 +97,10 @@ int main(int argc, char* argv[]) {
         // Scan the file containing virtual addresses to transform
         if ( argc == 7 ) {
             done = fscanf(inFile2, "%s", word);
+
+            if ( done != 1 ) {
+                break;
+            }
         }
         else {
             long generatedAddress = generateRandomAddress(vmsize);
@@ -112,6 +116,7 @@ int main(int argc, char* argv[]) {
 
             // write to file
             sprintf(word, "0x%s%s", zeros, hex);
+            fprintf(outFile, "%s ", word);
             printf("generated addr: %s\n", word);
             addressCount--;
             if ( addressCount > 0 ) {
